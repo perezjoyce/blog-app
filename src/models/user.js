@@ -4,7 +4,7 @@ const validator = require('validator')
 const uniqueValidator = require('mongoose-unique-validator')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
-// const Task = require('../models/task')
+// const BlogPost = require('../models/blogPost')
 
 /*Create the schema first and pass that 
 in to be able to use more advanced features*/
@@ -53,12 +53,12 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 })
 
-// set relationship between user and task
-// userSchema.virtual('tasks', {
-//     ref: 'Task',
-//     localField: '_id', //user
-//     foreignField: 'owner' //name of field on other thing
-// })
+// set relationship between author and blogPost
+userSchema.virtual('blogPost', {
+    ref: 'BlogPost',
+    localField: '_id', //user
+    foreignField: 'author' //name of field on other thing
+})
 
 //for unique validator
 userSchema.plugin(uniqueValidator)
