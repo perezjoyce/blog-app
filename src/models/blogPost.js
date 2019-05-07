@@ -2,9 +2,8 @@ const mongoose = require('mongoose')
 
 const blogPostSchema = new mongoose.Schema({
     author: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: 'User'
+        type: String,
+        default: "Joyce Perez"
     },
     title: {
         type: String,
@@ -38,6 +37,12 @@ const blogPostSchema = new mongoose.Schema({
     }
 }, {
     timestamps: true
+})
+
+blogPostSchema.virtual('user', {
+    ref: 'User',
+    localField: '_id', //user
+    foreignField: 'subscribers' //name of field on other thing
 })
 
 //Display blogPost

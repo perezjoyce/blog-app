@@ -12,6 +12,10 @@ in to be able to use more advanced features*/
 //define properties for schema
 const userSchema = new mongoose.Schema({
     //define the MODEL we're working with
+    isAdmin: {
+        type: Boolean,
+        default: false
+    },
     name: {
         type: String, //constructor function from JS
         required: true, 
@@ -54,11 +58,11 @@ const userSchema = new mongoose.Schema({
 })
 
 // set relationship between author and blogPost
-userSchema.virtual('blogPost', {
-    ref: 'BlogPost',
-    localField: '_id', //user
-    foreignField: 'author' //name of field on other thing
-})
+// userSchema.virtual('blogPost', {
+//     ref: 'BlogPost',
+//     localField: '_id', //user
+//     foreignField: 'author' //name of field on other thing
+// })
 
 //for unique validator
 userSchema.plugin(uniqueValidator)

@@ -8,8 +8,8 @@ const router = new express.Router()
 // ================= CREATE =======================
 router.post('/blogPosts', auth, async (req, res) => {
     const blogPost = new BlogPost({
-        ...req.body,
-        author: req.user._id
+        ...req.body
+        // author: req.user._id
     })
 
     try {
@@ -93,21 +93,26 @@ router.get('/blogPosts/:id', auth, async (req, res) => {
         res.send(blogPost)
     }
 
-    // check if subscriber
+    //*********************************not tested */
+    if (blogPost.author !== req.user.name) {
+        return res.status(400).send()
+    }
+
+    // check if subscriber or author *************************************
     try {
         blogPost.subscribers = blogPost.filter((subscriber) =>{
         return subscribers.subscriber !== req.user._id
     })
         res.send(blogPost)
     } catch (e) {
-        res.status(500).send()
+        res.status(500).send() // redirect to Stripe
     }
 })
 
 // ================= UPDATE =======================
 router.patch('/blogPosts/:id', auth, async (req, res) => {
     const updates = Object.keys(req.body)
-    const allowedUpdates = ['title', 'body', 'photo', 'isFree']
+    const allowedUpdates = ['title', 'body', 'photo', 'isFree', 'subscribers']
     const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
 
     if (!isValidOperation) {
@@ -116,11 +121,15 @@ router.patch('/blogPosts/:id', auth, async (req, res) => {
 
     try {
         const blogPost = await BlogPost.findOne({ 
-            _id: req.params.id, 
-            author: req.user._id
+            _id: req.params.id
         })
 
         if (!blogPost) {
+            return res.status(400).send()
+        }
+
+        //*********************************not tested */
+        if (blogPost.author !== req.user.name) {
             return res.status(400).send()
         }
 
@@ -136,12 +145,16 @@ router.patch('/blogPosts/:id', auth, async (req, res) => {
 router.delete('/blogPosts/:id', auth, async (req, res) => {
     try {
         const blogPost = await BlogPost.findOneAndDelete({
-            _id: req.params.id, 
-            author: req.user._id
+            _id: req.params.id
         })
 
         if (!blogPost) {
             return res.status(404).send('Blog post doesn\'t exist')
+        }
+
+        //*********************************not tested */
+        if (blogPost.author !== req.user.name) {
+            return res.status(400).send()
         }
 
         res.send('Blog post has been successfully deleted!')
@@ -172,9 +185,13 @@ router.post('/blogPosts/:id/photo', auth, upload.single('photo'), async (req, re
     }).png().toBuffer()
 
     const blogPost = await BlogPost.findOne({ 
-        _id: req.params.id, 
-        author: req.user._id
+        _id: req.params.id
     })
+
+    //*********************************not tested */
+    if (blogPost.author !== req.user.name) {
+        return res.status(400).send()
+    }
 
     blogPost.photo = buffer // this works when without req!
     await blogPost.save() // this works when without req!
@@ -203,6 +220,12 @@ router.get('/blogPosts/:id/photo', async (req, res) => {
 // ================= DELETE PHOTO =======================
 router.delete('/blogPosts/:id/photo', auth, async (req, res) => {
     const blogPost = await BlogPost.findById(req.params.id)
+
+    //*********************************not tested */
+    if (blogPost.author !== req.user.name) {
+        return res.status(400).send()
+    }
+    
     blogPost.photo = undefined
     await blogPost.save()
     res.send(req.blogPost)
