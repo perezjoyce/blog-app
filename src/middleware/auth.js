@@ -10,7 +10,7 @@ const auth = async (req, res, next) => {
         const decoded = jwt.verify(token, "secret")
         //STEP 4: find the user in the db and 
         //STEP 5: check if tokens if still part of the tokens array
-        const user = await User.findOne({ _id: decoded._id, 'tokens.token': token })
+        const user = await User.findOne({ _id: decoded._id, 'token': token })
     
         //STEP 6: Check if user exists
         if (!user) {

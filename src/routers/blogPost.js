@@ -27,33 +27,33 @@ router.post('/blogPosts', auth, async (req, res) => {
 //If yes, refer to article
 
 // ******************* ALL FREE BLOGPOSTS
-router.get('/blogPosts', auth, async (req, res) => {
-    const match = {}
-    const sort = {}
+// router.get('/blogPosts', auth, async (req, res) => {
+//     const match = {}
+//     const sort = {}
 
-    if (req.query.isFree) {
-        match.isFree = req.query.isFree === 'true'
-    }
+//     if (req.query.isFree) {
+//         match.isFree = req.query.isFree === 'true'
+//     }
 
-    if (req.query.sortBy) {
-        const parts = req.query.sortBy.split(":")
-        sort[parts[0]] = parts[1] === 'desc' ? -1 : 1
-    }
+//     if (req.query.sortBy) {
+//         const parts = req.query.sortBy.split(":")
+//         sort[parts[0]] = parts[1] === 'desc' ? -1 : 1
+//     }
 
-    try {
-        await req.user.populate({
-            path: 'blogPosts',
-            match,
-            options: {
-                limit: parseInt(req.query.limit),
-                skip: parseInt(req.query.skip),
-                sort
-            }
-        }).execPopulate()
-        res.send(req.user.blogPosts) //not displaying
-    } catch (e) {
-        res.status(500).send()
-    }
+//     try {
+//         await req.user.populate({
+//             path: 'blogPosts',
+//             match,
+//             options: {
+//                 limit: parseInt(req.query.limit),
+//                 skip: parseInt(req.query.skip),
+//                 sort
+//             }
+//         }).execPopulate()
+//         res.send(req.user.blogPosts) //not displaying
+//     } catch (e) {
+//         res.status(500).send()
+//     }
  
     //if author
     // const isAuthor = await BlogPost.findOne({ 
@@ -76,43 +76,36 @@ router.get('/blogPosts', auth, async (req, res) => {
     //     }
     // }
     
+// })
+
+// ******************* ALL BLOGPOSTS
+router.get('/finalBlogPosts', async (req, res) => {
+    const blogPosts = await BlogPost.find().where({ status: 'final'}).exec();
+    res.send(blogPosts); 
 })
 
-// ******************* ALL USER'S BLOGPOSTS
+router.get('/allBlogPosts', async (req, res) => {
+    const blogPosts = await BlogPost.find().sort([['updatedAt']]).exec();
+    res.send(blogPosts); 
+})
 
 // ******************* A SINGLE BLOGPOST (not verified if working)
-router.get('/blogPosts/:id', auth, async (req, res) => {
+router.get('/blogPosts/:id', async (req, res) => {
+
     const blogPost = await BlogPost.findOne({ _id: req.params.id })
 
-    if (!blogPost) {
-        return res.status(404).send()
+    if (blogPost) {
+        return res.send(blogPost)
     }
 
-    //check if free
-    if (blogPost.isFree === true) {
-        res.send(blogPost)
-    }
-
-    //*********************************not tested */
-    if (blogPost.author !== req.user.name) {
-        return res.status(400).send()
-    }
-
-    // check if subscriber or author *************************************
-    try {
-        blogPost.subscribers = blogPost.filter((subscriber) =>{
-        return subscribers.subscriber !== req.user._id
-    })
-        res.send(blogPost)
-    } catch (e) {
-        res.status(500).send() // redirect to Stripe
-    }
+    //refer to stripe payment
+    res.status(500).send() 
 })
 
 // ================= UPDATE =======================
 router.patch('/blogPosts/:id', auth, async (req, res) => {
     const updates = Object.keys(req.body)
-    const allowedUpdates = ['title', 'body', 'photo', 'isFree', 'subscribers']
+    const allowedUpdates = ['author', 'title', 'category', 'isFree', 'synopsis', 'status', 'body', 'photo', 'token']
     const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
 
     if (!isValidOperation) {
@@ -128,11 +121,6 @@ router.patch('/blogPosts/:id', auth, async (req, res) => {
             return res.status(400).send()
         }
 
-        //*********************************not tested */
-        if (blogPost.author !== req.user.name) {
-            return res.status(400).send()
-        }
-
         updates.forEach((update) => blogPost[update] = req.body[update])
         await blogPost.save()
         res.send(blogPost)
@@ -143,6 +131,8 @@ router.patch('/blogPosts/:id', auth, async (req, res) => {
 
 // ================= DELETE =======================
 router.delete('/blogPosts/:id', auth, async (req, res) => {
+
+    res.send(req.params.id)
     try {
         const blogPost = await BlogPost.findOneAndDelete({
             _id: req.params.id
@@ -150,11 +140,6 @@ router.delete('/blogPosts/:id', auth, async (req, res) => {
 
         if (!blogPost) {
             return res.status(404).send('Blog post doesn\'t exist')
-        }
-
-        //*********************************not tested */
-        if (blogPost.author !== req.user.name) {
-            return res.status(400).send()
         }
 
         res.send('Blog post has been successfully deleted!')
@@ -225,7 +210,7 @@ router.delete('/blogPosts/:id/photo', auth, async (req, res) => {
     if (blogPost.author !== req.user.name) {
         return res.status(400).send()
     }
-    
+
     blogPost.photo = undefined
     await blogPost.save()
     res.send(req.blogPost)

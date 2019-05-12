@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
         type: String, //constructor function from JS
         required: true, 
         trim: true
-    }, 
+    },
     email: {
         type: String,
         unique: true, 
@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true, 
-        minlength: 7,
+        minlength: 6,
         trim: true,
         validate(value) {
             if (value.toLowerCase().match('password')) {
@@ -44,12 +44,19 @@ const userSchema = new mongoose.Schema({
             }
         }
     }, 
-    tokens: [{
-        token: {
-            type: String,
-            required: true
-        }
-    }], 
+    status: {
+        type: String,
+        enum: ['active', 'deactivated'],
+        default: 'active'
+    },
+    plan: {
+        type: String,
+        enum: ['free', 'premium'],
+        default: 'free'
+    },
+    token: {
+        type: String
+    }, 
     avatar: {
         type: Buffer
     }
@@ -90,7 +97,8 @@ userSchema.methods.generateAuthToken = async function () {
     const user = this
     const token = jwt.sign({ _id: user._id.toString() }, "secret")
     //save token to database
-    user.tokens = user.tokens.concat({ token })
+    // user.tokens = user.tokens.concat({ token }) //skip
+    user.token = token
     await user.save()
 
     return token
@@ -103,7 +111,7 @@ userSchema.methods.toJSON = function () {
     const userObject = user.toObject()
     //manipulate userObject to change what we share to login users
     delete userObject.password
-    delete userObject.tokens
+    // delete userObject.tokens
 
     //remove avatar data from profile response to lighten JSON response
     delete userObject.avatar

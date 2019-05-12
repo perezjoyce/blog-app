@@ -23,27 +23,29 @@ const blogPostSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    subscribers: [{
-        subscriber:{
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-            ref: 'User'
-        }
-    }], 
+    status: {
+        type: String,
+        enum: ['draft', 'final'],
+        default: 'draft'
+    }, 
+    category: {
+        type: String,
+        enum: ['category 1', 'category 2', 'category 3', 'category 4'],
+        required: true
+    },
     photo: {
         type: Buffer,
         default: 0
-
     }
 }, {
     timestamps: true
 })
 
-blogPostSchema.virtual('user', {
-    ref: 'User',
-    localField: '_id', //user
-    foreignField: 'subscribers' //name of field on other thing
-})
+// blogPostSchema.virtual('user', {
+//     ref: 'User',
+//     localField: '_id', //user
+//     foreignField: 'subscribers' //name of field on other thing
+// })
 
 //Display blogPost
 blogPostSchema.methods.toJSON = function () {

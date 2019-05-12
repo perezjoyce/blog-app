@@ -21,21 +21,31 @@ router.post('/users', async (req, res) => {
 router.post('/users/login', async (req, res) => {
     try {
         const user = await User.findByCredentials(req.body.email, req.body.password)
-        //
-        const token = await user.generateAuthToken()
+        let token = user.token
+       
+        if(!token) {
+            token = await user.generateAuthToken()
+            await user.save()
+        }
+        
+        if (user.status === 'deactivated') {
+            user.status = 'active'
+            await user.save()
+        }
         res.send({ user, token })
     } catch (e) {
-        res.status(404).send()
+        res.send(e)
     }
 })
 
 // ================= LOGOUT (NOT WORKING) =======================
 router.post('/users/logout', auth, async (req, res) => {
+    //refactor so that there is only one token
     try {
-        req.user.tokens = req.user.tokens.filter((token) => {
-            return token.token !== req.token
-        })
-
+        // req.user.tokens = req.user.tokens.filter((token) => {
+        //     return token.token !== req.token
+        // })
+        req.user.token = null
         await req.user.save()
         res.send()
     } catch (e) {
@@ -43,27 +53,45 @@ router.post('/users/logout', auth, async (req, res) => {
     }
 })
 
-router.post('/users/logoutAll', auth, async (req, res) => {
-    try {
-        req.user.tokens = [] //delete contents
-        await req.user.save() //save user
-        res.send('You have been logged out!')
-    } catch (e) {
-        res.status(500).send(e)
-    }
-})
+// router.post('/users/logoutAll', auth, async (req, res) => {
+//     try {
+//         req.user.tokens = [] //delete contents
+//         await req.user.save() //save user
+//         res.send('You have been logged out!')
+//     } catch (e) {
+//         res.status(500).send(e)
+//     }
+// })
 
 
 // ================= READ =======================
 router.get('/users/me', auth, async (req, res) => {
-    res.send(req.user)
-    
+    res.send(req.user) 
+})
+
+router.get('/users/:id', auth, async (req, res) => {
+    try {
+
+        const user = await User.findOne({
+            _id: req.params.id
+        })
+
+        if (!user) {
+            return res.status(404).send()
+        }
+
+        res.send(user) 
+    } catch (e) {
+        res.status(404).send()
+    }
 })
 
 // ================= UPDATE =======================
-router.patch('/users/me', auth, async (req, res) => {
+router.patch('/users/:id', auth, async (req, res) => {
+    
     const updates = Object.keys(req.body)
-    const allowedUpdates = ['name', 'email', 'password']
+   
+    const allowedUpdates = ['_id', 'name', 'email', 'plan', 'status', 'isAdmin', 'password', 'token']
     const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
 
     if (!isValidOperation) {
@@ -71,21 +99,38 @@ router.patch('/users/me', auth, async (req, res) => {
     } 
 
     try {
-        updates.forEach((update) => req.user[update] = req.body[update])
-        await req.user.save()
+        const user = await User.findOne({
+            _id: req.params.id
+        })
 
-        res.send(req.user)
+        if (!user) {
+            return res.status(404).send()
+        }
+
+
+        updates.forEach((update) => user[update] = req.body[update])
+        await user.save()
+
+
+        res.send(user)
     } catch (e) {
         res.status(400).send(e)
     }
 })
 
 // ================= DELETE =======================
-router.delete('/users/me', auth, async (req, res) => {
+router.put('/users/me', auth, async (req, res) => {
 
     try {
-        await req.user.remove()
-        res.send(req.user)
+        const user = await User.findByCredentials(req.body.email, req.body.password)
+
+        if(!user) {
+            return res.status(404).send()
+        }
+        
+        user.status = 'deactivated'
+        await user.save()
+        res.send(user)
     } catch (e) {
         res.status(500).send(e)
     }
