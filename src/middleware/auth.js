@@ -11,7 +11,7 @@ const auth = async (req, res, next) => {
         //STEP 4: find the user in the db and 
         //STEP 5: check if tokens if still part of the tokens array
         const user = await User.findOne({ _id: decoded._id, 'token': token })
-    
+
         //STEP 6: Check if user exists
         if (!user) {
             throw new Error()
@@ -23,6 +23,7 @@ const auth = async (req, res, next) => {
         //STEP 8: Make route handler run if user is authenticated
         next()
     } catch (e) {
+        console.log(e);
         res.status(401).send({ error: 'Please authenticate. '})
     }
 }

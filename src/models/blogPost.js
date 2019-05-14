@@ -23,6 +23,10 @@ const blogPostSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isFeatured: {
+        type: Boolean,
+        default: false
+    },
     status: {
         type: String,
         enum: ['draft', 'final'],

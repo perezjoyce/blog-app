@@ -7,10 +7,21 @@ const router = new express.Router()
 
 // ================= CREATE =======================
 router.post('/blogPosts', auth, async (req, res) => {
+
     const blogPost = new BlogPost({
         ...req.body
         // author: req.user._id
     })
+
+    //check if new blogPost was set as featured article
+    if (blogPost.isFeatured) {
+        //check if there is an existing feature article
+        const featuredBlogPost = await BlogPost.findOne().where({ isFeatured: true }).exec()
+        if (featuredBlogPost) {
+            featuredBlogPost.isFeatured = false
+            await featuredBlogPost.save()
+        }
+    }
 
     try {
         await blogPost.save()
@@ -80,12 +91,12 @@ router.post('/blogPosts', auth, async (req, res) => {
 
 // ******************* ALL BLOGPOSTS
 router.get('/finalBlogPosts', async (req, res) => {
-    const blogPosts = await BlogPost.find().where({ status: 'final'}).exec();
+    const blogPosts = await BlogPost.find().where({ status: 'final'}).sort([['createdAt', -1]]).exec();
     res.send(blogPosts); 
 })
 
 router.get('/allBlogPosts', async (req, res) => {
-    const blogPosts = await BlogPost.find().sort([['updatedAt']]).exec();
+    const blogPosts = await BlogPost.find().sort([['updatedAt', -1]]).exec();
     res.send(blogPosts); 
 })
 
@@ -105,7 +116,7 @@ router.get('/blogPosts/:id', async (req, res) => {
 // ================= UPDATE =======================
 router.patch('/blogPosts/:id', auth, async (req, res) => {
     const updates = Object.keys(req.body)
-    const allowedUpdates = ['author', 'title', 'category', 'isFree', 'synopsis', 'status', 'body', 'photo', 'token']
+    const allowedUpdates = ['author', 'title', 'category', 'isFree', 'isFeatured', 'synopsis', 'status', 'body', 'photo', 'token']
     const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
 
     if (!isValidOperation) {
@@ -121,11 +132,21 @@ router.patch('/blogPosts/:id', auth, async (req, res) => {
             return res.status(400).send()
         }
 
+        //check if new blogPost was set as featured article
+        if (blogPost.isFeatured) {
+            //check if there is an existing feature article
+            const featuredBlogPost = await BlogPost.findOne().where({ isFeatured: true }).exec()
+            if (featuredBlogPost) {
+                featuredBlogPost.isFeatured = false
+                await featuredBlogPost.save()
+            }
+        }
+
         updates.forEach((update) => blogPost[update] = req.body[update])
         await blogPost.save()
         res.send(blogPost)
     } catch (e) {
-        res.status(400).send(e)
+        res.status(500).send(e)
     }
 })
 
@@ -140,6 +161,11 @@ router.delete('/blogPosts/:id', auth, async (req, res) => {
 
         if (!blogPost) {
             return res.status(404).send('Blog post doesn\'t exist')
+        }
+
+        //check if blogPost was set as featured article
+        if (blogPost.isFeatured) {
+            return res.status().send('Please assign a new featured article first.')
         }
 
         res.send('Blog post has been successfully deleted!')
@@ -172,11 +198,6 @@ router.post('/blogPosts/:id/photo', auth, upload.single('photo'), async (req, re
     const blogPost = await BlogPost.findOne({ 
         _id: req.params.id
     })
-
-    //*********************************not tested */
-    if (blogPost.author !== req.user.name) {
-        return res.status(400).send()
-    }
 
     blogPost.photo = buffer // this works when without req!
     await blogPost.save() // this works when without req!

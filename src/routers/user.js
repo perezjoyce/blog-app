@@ -4,6 +4,7 @@ const User = require('../models/user')
 const auth = require('../middleware/auth')
 const multer = require('multer')
 const sharp = require('sharp') // for images
+const stripe = require("stripe")("sk_test_aDXjl0xtprhGg8R2qOX7sB2v");
 
 // ================= CREATE =======================
 router.post('/users', async (req, res) => {
@@ -39,42 +40,27 @@ router.post('/users/login', async (req, res) => {
 })
 
 // ================= LOGOUT (NOT WORKING) =======================
-router.post('/users/logout', auth, async (req, res) => {
+router.post('/users/logout/:id', async (req, res) => {
     //refactor so that there is only one token
     try {
-        // req.user.tokens = req.user.tokens.filter((token) => {
-        //     return token.token !== req.token
-        // })
-        req.user.token = null
-        await req.user.save()
+        const user = await User.findById(req.params.id)
+        user.token = null
+        await user.save()
         res.send()
     } catch (e) {
         res.status(500).send()
     }
 })
 
-// router.post('/users/logoutAll', auth, async (req, res) => {
-//     try {
-//         req.user.tokens = [] //delete contents
-//         await req.user.save() //save user
-//         res.send('You have been logged out!')
-//     } catch (e) {
-//         res.status(500).send(e)
-//     }
-// })
-
-
 // ================= READ =======================
 router.get('/users/me', auth, async (req, res) => {
     res.send(req.user) 
 })
 
-router.get('/users/:id', auth, async (req, res) => {
-    try {
+router.get('/users/:id', async (req, res) => {
 
-        const user = await User.findOne({
-            _id: req.params.id
-        })
+    try {
+        const user = await User.findById(req.params.id)
 
         if (!user) {
             return res.status(404).send()
@@ -82,8 +68,13 @@ router.get('/users/:id', auth, async (req, res) => {
 
         res.send(user) 
     } catch (e) {
-        res.status(404).send()
+        res.status(500).send()
     }
+})
+
+router.get('/allUsers', async (req, res) => {
+    const blogUsers = await User.find().sort([['createdAt']]).exec();
+    res.send(blogUsers); 
 })
 
 // ================= UPDATE =======================
@@ -189,6 +180,36 @@ router.delete('/users/me/avatar', auth, async (req, res) => {
     res.send(req.user)
 }, (error, req, res, next) => {
     res.status(400).send({ error: error.message })
+})
+
+// ================= Stripe Subscription =======================
+router.post('/users/me/subscribe', auth, async (req, res) => {
+
+    try {
+
+        if (!req.user) {
+            console.log('not here');
+            return res.status(404).send()
+        }
+        
+        const stripeSubscription = await stripe.charges.create({
+            amount: 2000,
+            currency: "usd",
+            description: "Charge for ",
+            source: req.body.stripeToken,
+        })
+
+        if (stripeSubscription.paid) {
+            req.user.plan = 'premium';
+            await req.user.save()
+            console.log('user paid');
+        }
+        
+        res.send(req.user)
+    } catch (e) {
+        console.log(e)
+        res.status(500).send(e)
+    }
 })
 
 
