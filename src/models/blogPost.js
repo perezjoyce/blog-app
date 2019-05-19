@@ -56,6 +56,7 @@ blogPostSchema.methods.toJSON = function () {
     const blogPost = this
     //return raw object with just blogPost data
     const blogPostObject = blogPost.toObject()
+    // delete blogPostObject.photo
     return blogPostObject
 }
 

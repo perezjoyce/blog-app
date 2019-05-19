@@ -114,13 +114,23 @@ router.get('/blogPosts/:id', async (req, res) => {
 })
 
 // ================= UPDATE =======================
-router.patch('/blogPosts/:id', auth, async (req, res) => {
+router.patch('/blogPosts/:id', async (req, res) => {
     const updates = Object.keys(req.body)
     const allowedUpdates = ['author', 'title', 'category', 'isFree', 'isFeatured', 'synopsis', 'status', 'body', 'photo', 'token']
     const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
 
     if (!isValidOperation) {
         return res.status(403).send({ error: 'Invalid updates!'})
+    }
+
+    //check if new blogPost was set as featured article
+    if (req.body.isFeatured) {
+        const featuredBlogPost = await BlogPost.findOne().where({ isFeatured: true }).exec()
+        res.send(featuredBlogPost)
+        if (featuredBlogPost) {
+            featuredBlogPost.isFeatured = false
+            await featuredBlogPost.save()
+        }
     }
 
     try {
@@ -130,16 +140,6 @@ router.patch('/blogPosts/:id', auth, async (req, res) => {
 
         if (!blogPost) {
             return res.status(400).send()
-        }
-
-        //check if new blogPost was set as featured article
-        if (blogPost.isFeatured) {
-            //check if there is an existing feature article
-            const featuredBlogPost = await BlogPost.findOne().where({ isFeatured: true }).exec()
-            if (featuredBlogPost) {
-                featuredBlogPost.isFeatured = false
-                await featuredBlogPost.save()
-            }
         }
 
         updates.forEach((update) => blogPost[update] = req.body[update])
