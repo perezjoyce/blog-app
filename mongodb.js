@@ -3,7 +3,7 @@ const mongodb = require('mongodb')
 const { MongoClient, ObjectID } = require('mongodb') 
 
 //CONNECT TO LOCAL HOST SERVER THAT'S UP AND RUNNING
-const connectURL = 'mongodb://127.0.0.1:27017'
+const connectURL = process.env.MONGODB_URI
 const databaseName = 'blog-app'
 
 //CONNECT TO SERVER

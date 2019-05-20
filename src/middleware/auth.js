@@ -7,7 +7,7 @@ const auth = async (req, res, next) => {
         //STEP 2: get jwt out of the entire header value using replace
         const token = req.header('Authorization').replace('Bearer ', '')
         //STEP 3: make sure that token is valid: created by server & hasn't expired
-        const decoded = jwt.verify(token, "secret")
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
         //STEP 4: find the user in the db and 
         //STEP 5: check if tokens if still part of the tokens array
         const user = await User.findOne({ _id: decoded._id, 'token': token })
